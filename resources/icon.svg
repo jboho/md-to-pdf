@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bg)"/>
+
+  <!-- Document shape — white, centered, bold -->
+  <path
+    d="M152,72 L296,72 L368,144 L368,408 Q368,424 352,424 L152,424 Q136,424 136,408 L136,88 Q136,72 152,72 Z"
+    fill="white"
+  />
+  <!-- Dog-ear fold -->
+  <path
+    d="M296,72 L296,128 Q296,144 312,144 L368,144"
+    fill="#c7d2fe"
+  />
+
+  <!-- Bold down-arrow in center of document -->
+  <g transform="translate(252, 204)">
+    <!-- Vertical bar -->
+    <rect x="-20" y="0" width="40" height="120" rx="6" fill="#4f46e5"/>
+    <!-- Arrow head (chevron) -->
+    <polygon points="-56,100 0,164 56,100" fill="#4f46e5"/>
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+appId: com.md-to-pdf.app
+productName: MD to PDF
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**/*
+  - resources/icon.png
+asarUnpack:
+  - node_modules/better-sqlite3/**
+mac:
+  icon: resources/icon.icns
+  category: public.app-category.productivity
+  target:
+    - dmg
