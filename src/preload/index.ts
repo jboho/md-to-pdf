@@ -41,6 +41,11 @@ const api: ElectronAPI = {
     listMarketplaceThemes: () => ipcRenderer.invoke('style:list-marketplace-themes')
   },
 
+  feedback: {
+    submit: (input) => ipcRenderer.invoke('feedback:submit', input),
+    list: () => ipcRenderer.invoke('feedback:list')
+  },
+
   pdf: {
     generateSingle: (fileId) => ipcRenderer.invoke('pdf:generate-single', fileId),
     generateBatch: (taskId) => ipcRenderer.invoke('pdf:generate-batch', taskId),

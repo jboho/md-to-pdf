@@ -4,6 +4,7 @@ import { registerVersionHandlers } from './version.handlers'
 import { registerStyleHandlers } from './style.handlers'
 import { registerDialogHandlers } from './dialog.handlers'
 import { registerPdfHandlers } from './pdf.handlers'
+import { registerFeedbackHandlers } from './feedback.handlers'
 
 export function registerAllHandlers(): void {
   registerTaskHandlers()
@@ -12,4 +13,5 @@ export function registerAllHandlers(): void {
   registerStyleHandlers()
   registerDialogHandlers()
   registerPdfHandlers()
+  registerFeedbackHandlers()
 }

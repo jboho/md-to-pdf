@@ -139,6 +139,23 @@ export interface MarketplaceTheme {
   css: string
 }
 
+export type FeedbackCategory = 'bug' | 'feature' | 'general'
+
+export interface Feedback {
+  id: string
+  category: FeedbackCategory
+  message: string
+  appVersion: string
+  platform: string
+  submittedToGithub: boolean
+  createdAt: string
+}
+
+export interface CreateFeedbackInput {
+  category: FeedbackCategory
+  message: string
+}
+
 // ---- The API contract ----
 
 export interface ElectronAPI {
@@ -178,6 +195,11 @@ export interface ElectronAPI {
     updateCssTheme(id: string, name: string, css: string): Promise<CssTheme>
     deleteCssTheme(id: string): Promise<void>
     listMarketplaceThemes(): Promise<MarketplaceTheme[]>
+  }
+
+  feedback: {
+    submit(input: CreateFeedbackInput): Promise<Feedback>
+    list(): Promise<Feedback[]>
   }
 
   pdf: {

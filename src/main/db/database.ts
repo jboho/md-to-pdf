@@ -3,6 +3,7 @@ import { app } from 'electron'
 import path from 'node:path'
 import { migration001 } from './migrations/001_initial'
 import { migration002 } from './migrations/002_css_themes'
+import { migration003 } from './migrations/003_feedback'
 
 let db: Database.Database | null = null
 
@@ -42,7 +43,8 @@ export function runMigrations(database: Database.Database): void {
 
   const migrations = [
     { name: '001_initial', sql: migration001 },
-    { name: '002_css_themes', sql: migration002 }
+    { name: '002_css_themes', sql: migration002 },
+    { name: '003_feedback', sql: migration003 }
   ]
 
   for (const m of migrations) {

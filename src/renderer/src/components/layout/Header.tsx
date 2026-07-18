@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FileText, ChevronLeft, Moon, Sun, Zap } from 'lucide-react'
+import { FileText, ChevronLeft, Moon, Sun, Zap, MessageSquarePlus } from 'lucide-react'
 import { useThemeContext } from '@/components/ThemeProvider'
+import FeedbackDialog from '@/components/feedback/FeedbackDialog'
 
 export default function Header(): React.ReactElement {
   const navigate = useNavigate()
   const location = useLocation()
   const isHome = location.pathname === '/'
   const { isDark, toggle } = useThemeContext()
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   return (
     <header className="h-12 border-b border-border flex items-center px-4 gap-3 shrink-0 bg-background/80 backdrop-blur-sm"
@@ -46,6 +49,16 @@ export default function Header(): React.ReactElement {
       </button>
 
       <button
+        onClick={() => setFeedbackOpen(true)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        title="Send feedback"
+      >
+        <MessageSquarePlus className="w-3.5 h-3.5" />
+        Feedback
+      </button>
+
+      <button
         onClick={toggle}
         className="p-1.5 rounded-md hover:bg-accent transition-colors"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
@@ -53,6 +66,8 @@ export default function Header(): React.ReactElement {
       >
         {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
       </button>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </header>
   )
 }
