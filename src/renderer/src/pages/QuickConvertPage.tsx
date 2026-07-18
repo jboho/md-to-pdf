@@ -11,9 +11,10 @@ import {
 import { Download, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import MarkdownEditor from '@/components/editor/MarkdownEditor'
 import MarkdownPreview from '@/components/editor/MarkdownPreview'
+import CssEditor from '@/components/editor/CssEditor'
 import { useThemeContext } from '@/components/ThemeProvider'
 import { toast } from 'sonner'
-import type { ThemeName, PageSize } from '../../../preload/types'
+import type { ThemeName, PageSize, CssTheme } from '../../../preload/types'
 
 const defaultMarkdown = `# Hello World
 
@@ -49,10 +50,15 @@ export default function QuickConvertPage(): React.ReactElement {
   const [themeCss, setThemeCss] = useState('')
   const [generating, setGenerating] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [cssPresets, setCssPresets] = useState<CssTheme[]>([])
 
   useEffect(() => {
     window.electronAPI.style.getThemeCss(theme).then(setThemeCss)
   }, [theme])
+
+  useEffect(() => {
+    window.electronAPI.style.listCssThemes().then(setCssPresets)
+  }, [])
 
   const combinedCss = themeCss + '\n' + customCss
 
@@ -163,13 +169,31 @@ export default function QuickConvertPage(): React.ReactElement {
             </div>
           </div>
           <div className="flex-1">
-            <label className="text-xs text-muted-foreground">Custom CSS</label>
-            <textarea
-              value={customCss}
-              onChange={(e) => setCustomCss(e.target.value)}
-              className="mt-1 w-full h-16 rounded-md border border-input bg-transparent px-2 py-1 text-xs font-mono shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
-              placeholder=".markdown-body { font-size: 14px; }"
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-muted-foreground">Custom CSS</label>
+              {cssPresets.length > 0 && (
+                <select
+                  className="text-xs border border-input rounded px-2 py-0.5 bg-background max-w-[10rem]"
+                  value=""
+                  onChange={(e) => {
+                    const preset = cssPresets.find((p) => p.id === e.target.value)
+                    if (preset) setCustomCss(preset.css)
+                  }}
+                >
+                  <option value="" disabled>
+                    Load preset…
+                  </option>
+                  {cssPresets.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="mt-1">
+              <CssEditor value={customCss} onChange={setCustomCss} darkMode={isDark} minHeight="5rem" />
+            </div>
           </div>
         </div>
       )}

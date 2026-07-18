@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'node:path'
 import { migration001 } from './migrations/001_initial'
+import { migration002 } from './migrations/002_css_themes'
 
 let db: Database.Database | null = null
 
@@ -26,13 +27,15 @@ function runMigrations(database: Database.Database): void {
   `)
 
   const applied = new Set(
-    database
-      .prepare('SELECT name FROM _migrations')
-      .all()
-      .map((r: { name: string }) => r.name)
+    (database.prepare('SELECT name FROM _migrations').all() as { name: string }[]).map(
+      (r) => r.name
+    )
   )
 
-  const migrations = [{ name: '001_initial', sql: migration001 }]
+  const migrations = [
+    { name: '001_initial', sql: migration001 },
+    { name: '002_css_themes', sql: migration002 }
+  ]
 
   for (const m of migrations) {
     if (!applied.has(m.name)) {
