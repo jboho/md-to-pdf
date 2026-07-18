@@ -73,6 +73,7 @@ export default function StylesPage(): React.ReactElement {
   const [savingPreset, setSavingPreset] = useState(false)
   const [showMarketplace, setShowMarketplace] = useState(false)
   const [marketplaceThemes, setMarketplaceThemes] = useState<MarketplaceTheme[]>([])
+  const [marketplaceSearch, setMarketplaceSearch] = useState('')
 
   // Load task settings
   useEffect(() => {
@@ -167,6 +168,7 @@ export default function StylesPage(): React.ReactElement {
   const handleOpenMarketplace = async (): Promise<void> => {
     const themes = await window.electronAPI.style.listMarketplaceThemes()
     setMarketplaceThemes(themes)
+    setMarketplaceSearch('')
     setShowMarketplace(true)
   }
 
@@ -180,6 +182,20 @@ export default function StylesPage(): React.ReactElement {
       console.error(err)
     }
   }
+
+  const handlePreviewMarketplaceTheme = (t: MarketplaceTheme): void => {
+    setCustomCss(t.css)
+    setShowMarketplace(false)
+    toast.info(`Previewing "${t.name}" — Save Styles to keep it`)
+  }
+
+  const installedThemeNames = new Set(cssPresets.map((p) => p.name.toLowerCase()))
+  const query = marketplaceSearch.trim().toLowerCase()
+  const filteredMarketplaceThemes = query
+    ? marketplaceThemes.filter((t) =>
+        [t.name, t.author, t.description].some((field) => field.toLowerCase().includes(query))
+      )
+    : marketplaceThemes
 
   if (loading || !task) {
     return (
@@ -387,41 +403,66 @@ export default function StylesPage(): React.ReactElement {
       {showMarketplace && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-background border rounded-xl shadow-xl w-[480px] max-h-[70vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b shrink-0">
-              <h3 className="font-semibold text-sm">Community Themes</h3>
-              <button
-                onClick={() => setShowMarketplace(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title="Close"
-              >
-                <span aria-hidden>×</span>
-              </button>
+            <div className="p-4 border-b shrink-0 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">Community Themes</h3>
+                <button
+                  onClick={() => setShowMarketplace(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="Close"
+                >
+                  <span aria-hidden>×</span>
+                </button>
+              </div>
+              <Input
+                value={marketplaceSearch}
+                onChange={(e) => setMarketplaceSearch(e.target.value)}
+                placeholder="Search themes..."
+                className="h-8 text-xs"
+                autoFocus
+              />
             </div>
             <div className="overflow-auto p-4 space-y-3">
-              {marketplaceThemes.length === 0 ? (
+              {filteredMarketplaceThemes.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No community themes available.
+                  {marketplaceThemes.length === 0
+                    ? 'No community themes available.'
+                    : 'No themes match your search.'}
                 </p>
               ) : (
-                marketplaceThemes.map((t) => (
-                  <div key={t.id} className="border rounded-lg p-3 space-y-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium">{t.name}</p>
-                        <p className="text-xs text-muted-foreground">by {t.author}</p>
+                filteredMarketplaceThemes.map((t) => {
+                  const installed = installedThemeNames.has(t.name.toLowerCase())
+                  return (
+                    <div key={t.id} className="border rounded-lg p-3 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium">{t.name}</p>
+                          <p className="text-xs text-muted-foreground">by {t.author}</p>
+                        </div>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => handlePreviewMarketplaceTheme(t)}
+                          >
+                            Preview
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            disabled={installed}
+                            onClick={() => handleInstallMarketplaceTheme(t)}
+                          >
+                            {installed ? 'Installed' : 'Install'}
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => handleInstallMarketplaceTheme(t)}
-                      >
-                        Install
-                      </Button>
+                      <p className="text-xs text-muted-foreground">{t.description}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{t.description}</p>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
