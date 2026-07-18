@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,11 +9,13 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Save, Loader2 } from 'lucide-react'
+import { Save, Loader2, Bookmark, BookmarkPlus, Store, Trash2 } from 'lucide-react'
 import MarkdownPreview from '@/components/editor/MarkdownPreview'
+import CssEditor from '@/components/editor/CssEditor'
+import { useThemeContext } from '@/components/ThemeProvider'
 import { useTask } from '@/hooks/useTask'
 import { toast } from 'sonner'
-import type { ThemeName, PageSize } from '../../../preload/types'
+import type { ThemeName, PageSize, CssTheme, MarketplaceTheme } from '../../../preload/types'
 
 const sampleMarkdown = `# Sample Document
 
@@ -54,6 +56,7 @@ function hello() {
 export default function StylesPage(): React.ReactElement {
   const { taskId } = useParams<{ taskId: string }>()
   const { task, loading, refresh } = useTask(taskId)
+  const { isDark } = useThemeContext()
   const [theme, setTheme] = useState<ThemeName>('github')
   const [pageSize, setPageSize] = useState<PageSize>('A4')
   const [marginTop, setMarginTop] = useState(20)
@@ -63,7 +66,13 @@ export default function StylesPage(): React.ReactElement {
   const [customCss, setCustomCss] = useState('')
   const [themeCss, setThemeCss] = useState('')
   const [saving, setSaving] = useState(false)
-  const cssTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const [cssPresets, setCssPresets] = useState<CssTheme[]>([])
+  const [savePresetName, setSavePresetName] = useState('')
+  const [showSaveInput, setShowSaveInput] = useState(false)
+  const [savingPreset, setSavingPreset] = useState(false)
+  const [showMarketplace, setShowMarketplace] = useState(false)
+  const [marketplaceThemes, setMarketplaceThemes] = useState<MarketplaceTheme[]>([])
 
   // Load task settings
   useEffect(() => {
@@ -81,6 +90,11 @@ export default function StylesPage(): React.ReactElement {
   useEffect(() => {
     window.electronAPI.style.getThemeCss(theme).then(setThemeCss)
   }, [theme])
+
+  // Load saved CSS presets
+  useEffect(() => {
+    window.electronAPI.style.listCssThemes().then(setCssPresets)
+  }, [])
 
   const handleSave = useCallback(async () => {
     if (!taskId) return
@@ -112,6 +126,58 @@ export default function StylesPage(): React.ReactElement {
       await window.electronAPI.task.update(taskId, { outputDir: dir })
       toast.success('Output directory set')
       refresh()
+    }
+  }
+
+  const handleLoadPreset = (css: string): void => {
+    setCustomCss(css)
+  }
+
+  const handleSavePreset = async (): Promise<void> => {
+    if (!savePresetName.trim()) return
+    setSavingPreset(true)
+    try {
+      const created = await window.electronAPI.style.createCssTheme(
+        savePresetName.trim(),
+        customCss
+      )
+      setCssPresets((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setSavePresetName('')
+      setShowSaveInput(false)
+      toast.success(`Preset "${created.name}" saved`)
+    } catch (err) {
+      toast.error('Failed to save preset — a preset with this name may already exist')
+      console.error(err)
+    } finally {
+      setSavingPreset(false)
+    }
+  }
+
+  const handleDeletePreset = async (id: string, name: string): Promise<void> => {
+    try {
+      await window.electronAPI.style.deleteCssTheme(id)
+      setCssPresets((prev) => prev.filter((p) => p.id !== id))
+      toast.success(`Preset "${name}" deleted`)
+    } catch (err) {
+      toast.error('Failed to delete preset')
+      console.error(err)
+    }
+  }
+
+  const handleOpenMarketplace = async (): Promise<void> => {
+    const themes = await window.electronAPI.style.listMarketplaceThemes()
+    setMarketplaceThemes(themes)
+    setShowMarketplace(true)
+  }
+
+  const handleInstallMarketplaceTheme = async (t: MarketplaceTheme): Promise<void> => {
+    try {
+      const created = await window.electronAPI.style.createCssTheme(t.name, t.css)
+      setCssPresets((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      toast.success(`"${t.name}" installed`)
+    } catch (err) {
+      toast.error('Failed to install theme — a preset with this name may already exist')
+      console.error(err)
     }
   }
 
@@ -227,16 +293,83 @@ export default function StylesPage(): React.ReactElement {
           </div>
         </div>
 
+        {/* CSS Presets */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-medium text-muted-foreground">CSS Presets</label>
+            <div className="flex gap-1">
+              <button
+                onClick={handleOpenMarketplace}
+                title="Browse community themes"
+                className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Store className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setShowSaveInput(!showSaveInput)}
+                title="Save current CSS as preset"
+                className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <BookmarkPlus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {showSaveInput && (
+            <div className="flex gap-1.5 mb-2">
+              <Input
+                value={savePresetName}
+                onChange={(e) => setSavePresetName(e.target.value)}
+                placeholder="Preset name..."
+                className="h-7 text-xs flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSavePreset()
+                }}
+                autoFocus
+              />
+              <Button
+                size="sm"
+                className="h-7 px-2"
+                onClick={handleSavePreset}
+                disabled={!savePresetName.trim() || savingPreset}
+              >
+                Save
+              </Button>
+            </div>
+          )}
+
+          {cssPresets.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">No presets saved yet.</p>
+          ) : (
+            <div className="space-y-1">
+              {cssPresets.map((preset) => (
+                <div key={preset.id} className="flex items-center gap-1 group">
+                  <button
+                    onClick={() => handleLoadPreset(preset.css)}
+                    className="flex-1 text-left text-xs px-2 py-1 rounded hover:bg-accent transition-colors truncate flex items-center gap-1.5"
+                  >
+                    <Bookmark className="w-3 h-3 shrink-0 text-muted-foreground" />
+                    {preset.name}
+                  </button>
+                  <button
+                    onClick={() => handleDeletePreset(preset.id, preset.name)}
+                    title="Delete preset"
+                    className="p-1 rounded opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Custom CSS */}
         <div>
           <label className="text-xs font-medium text-muted-foreground">Custom CSS</label>
-          <textarea
-            ref={cssTextareaRef}
-            value={customCss}
-            onChange={(e) => setCustomCss(e.target.value)}
-            className="mt-2 w-full h-48 rounded-md border border-input bg-transparent px-3 py-2 text-xs font-mono shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
-            placeholder=".markdown-body { ... }"
-          />
+          <div className="mt-2">
+            <CssEditor value={customCss} onChange={setCustomCss} darkMode={isDark} minHeight="12rem" />
+          </div>
         </div>
 
         <Button onClick={handleSave} disabled={saving} className="w-full">
@@ -249,6 +382,51 @@ export default function StylesPage(): React.ReactElement {
       <div className="flex-1 overflow-auto bg-white">
         <MarkdownPreview content={sampleMarkdown} customCss={combinedCss} pdfPreview />
       </div>
+
+      {/* Marketplace modal */}
+      {showMarketplace && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border rounded-xl shadow-xl w-[480px] max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
+              <h3 className="font-semibold text-sm">Community Themes</h3>
+              <button
+                onClick={() => setShowMarketplace(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title="Close"
+              >
+                <span aria-hidden>×</span>
+              </button>
+            </div>
+            <div className="overflow-auto p-4 space-y-3">
+              {marketplaceThemes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No community themes available.
+                </p>
+              ) : (
+                marketplaceThemes.map((t) => (
+                  <div key={t.id} className="border rounded-lg p-3 space-y-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">by {t.author}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => handleInstallMarketplaceTheme(t)}
+                      >
+                        Install
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t.description}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

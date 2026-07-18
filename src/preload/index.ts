@@ -32,7 +32,13 @@ const api: ElectronAPI = {
 
   style: {
     getThemeCss: (theme) => ipcRenderer.invoke('style:get-theme-css', theme),
-    listThemes: () => ipcRenderer.invoke('style:list-themes')
+    listThemes: () => ipcRenderer.invoke('style:list-themes'),
+    listCssThemes: () => ipcRenderer.invoke('style:list-css-themes'),
+    createCssTheme: (name, css) => ipcRenderer.invoke('style:create-css-theme', name, css),
+    updateCssTheme: (id, name, css) =>
+      ipcRenderer.invoke('style:update-css-theme', id, name, css),
+    deleteCssTheme: (id) => ipcRenderer.invoke('style:delete-css-theme', id),
+    listMarketplaceThemes: () => ipcRenderer.invoke('style:list-marketplace-themes')
   },
 
   pdf: {

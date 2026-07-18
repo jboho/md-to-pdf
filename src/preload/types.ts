@@ -123,6 +123,22 @@ export interface QuickConvertInput {
   marginLeft: number
 }
 
+export interface CssTheme {
+  id: string
+  name: string
+  css: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MarketplaceTheme {
+  id: string
+  name: string
+  author: string
+  description: string
+  css: string
+}
+
 // ---- The API contract ----
 
 export interface ElectronAPI {
@@ -157,6 +173,11 @@ export interface ElectronAPI {
   style: {
     getThemeCss(theme: ThemeName): Promise<string>
     listThemes(): Promise<ThemeName[]>
+    listCssThemes(): Promise<CssTheme[]>
+    createCssTheme(name: string, css: string): Promise<CssTheme>
+    updateCssTheme(id: string, name: string, css: string): Promise<CssTheme>
+    deleteCssTheme(id: string): Promise<void>
+    listMarketplaceThemes(): Promise<MarketplaceTheme[]>
   }
 
   pdf: {
