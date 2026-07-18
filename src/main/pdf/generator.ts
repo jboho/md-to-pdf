@@ -72,14 +72,6 @@ async function generateSinglePdf(
   const outputPath = path.join(outputDir, outputFilename)
   fs.writeFileSync(outputPath, pdfBuffer)
 
-  // Update file status
-  fileRepository.setStatus(file.id, 'converted')
-
-  // Update task output dir if not set
-  if (!task.outputDir) {
-    taskRepository.update(task.id, { outputDir: outputDir })
-  }
-
   return outputPath
 }
 
@@ -90,18 +82,26 @@ export async function generatePdf(
 ): Promise<string> {
   fileRepository.setStatus(file.id, 'converting')
   try {
-    return await generateSinglePdf(file, task, themeCss)
+    const outputPath = await generateSinglePdf(file, task, themeCss)
+    fileRepository.setStatus(file.id, 'converted')
+    if (!task.outputDir) {
+      taskRepository.update(task.id, { outputDir: getOutputDir(task) })
+    }
+    return outputPath
   } catch (err) {
     fileRepository.setStatus(file.id, 'error')
     throw err
   }
 }
 
+export type FileRenderer = (file: TaskFile, task: Task, themeCss: string) => Promise<string>
+
 export async function generateBatch(
   task: Task,
   readyFiles: TaskFile[],
   themeCss: string,
-  mainWindow: BrowserWindow
+  mainWindow: BrowserWindow,
+  renderFile: FileRenderer = generateSinglePdf
 ): Promise<void> {
   const batchState = { cancelled: false }
   activeBatches.set(task.id, batchState)
@@ -133,7 +133,8 @@ export async function generateBatch(
 
     try {
       fileRepository.setStatus(readyFiles[i].id, 'converting')
-      await generateSinglePdf(readyFiles[i], task, themeCss)
+      await renderFile(readyFiles[i], task, themeCss)
+      fileRepository.setStatus(readyFiles[i].id, 'converted')
       fileProgresses[i].status = 'done'
     } catch (err) {
       fileProgresses[i].status = 'error'
@@ -145,6 +146,10 @@ export async function generateBatch(
   }
 
   activeBatches.delete(task.id)
+
+  if (!task.outputDir) {
+    taskRepository.update(task.id, { outputDir: getOutputDir(task) })
+  }
 
   // Check if all files in the task are converted
   const allFiles = fileRepository.findByTask(task.id)

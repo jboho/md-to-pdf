@@ -23,8 +23,10 @@ function rowToVersion(row: VersionRow): FileVersion {
 export const versionRepository = {
   findByFile(fileId: string): FileVersion[] {
     const db = getDb()
+    // created_at is second-precision (datetime('now')); rowid breaks ties so
+    // versions saved within the same second still order by insertion.
     const rows = db
-      .prepare('SELECT * FROM file_versions WHERE file_id = ? ORDER BY created_at DESC')
+      .prepare('SELECT * FROM file_versions WHERE file_id = ? ORDER BY created_at DESC, rowid DESC')
       .all(fileId) as VersionRow[]
     return rows.map(rowToVersion)
   },
@@ -58,7 +60,9 @@ export const versionRepository = {
   getLatest(fileId: string): FileVersion | null {
     const db = getDb()
     const row = db
-      .prepare('SELECT * FROM file_versions WHERE file_id = ? ORDER BY created_at DESC LIMIT 1')
+      .prepare(
+        'SELECT * FROM file_versions WHERE file_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1'
+      )
       .get(fileId) as VersionRow | undefined
     return row ? rowToVersion(row) : null
   }

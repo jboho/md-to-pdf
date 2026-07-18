@@ -17,7 +17,15 @@ export function getDb(): Database.Database {
   return db
 }
 
-function runMigrations(database: Database.Database): void {
+/**
+ * Overrides the active database instance. Used by tests to inject an in-memory
+ * database; production code never calls this.
+ */
+export function setDbInstance(instance: Database.Database | null): void {
+  db = instance
+}
+
+export function runMigrations(database: Database.Database): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS _migrations (
       id   INTEGER PRIMARY KEY AUTOINCREMENT,
