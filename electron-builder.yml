@@ -19,7 +19,9 @@ mac:
   # Notarization runs via the afterSign hook (scripts/notarize.js), gated on
   # Apple credentials, so keep electron-builder's built-in notarize disabled.
   notarize: false
+  # Build only the signed + notarized .app here (target overridden to `dir` on
+  # the CLI). The .dmg is assembled from a clean copy by scripts/make-dmg.js,
+  # because electron-builder's inline hdiutil DMG step fails with "Resource
+  # busy" against the live app bundle on this toolchain.
   target:
-    - dmg
-dmg:
-  artifactName: ${productName}-${version}-${arch}.dmg
+    - dir

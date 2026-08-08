@@ -15,7 +15,7 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dist": "npm run build && electron-builder --mac --config electron-builder.yml"
+    "dist": "npm run build && electron-builder --mac dir --config electron-builder.yml && node scripts/make-dmg.js"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",
