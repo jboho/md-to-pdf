@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    # macOS: better-sqlite3's postinstall rebuild targets Electron's ABI, and
+    # this is ultimately a macOS desktop app.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: command npm ci
+      - run: command npm run typecheck
+      # postinstall rebuilds better-sqlite3 for Electron's Node ABI, but
+      # vitest runs under plain Node — rebuild for that ABI before testing,
+      # or every DB-backed test fails with a NODE_MODULE_VERSION mismatch.
+      - run: command npm run rebuild:node
+      - run: command npm test
+      - run: command npm run build

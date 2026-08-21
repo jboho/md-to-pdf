@@ -1,0 +1,47 @@
+name: Release
+
+# Build & publish a macOS DMG to a GitHub Release on a version tag.
+# Bump package.json "version", commit it, then:
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+#
+# Signed + notarized when the repo's signing secrets are configured (Settings
+# → Secrets and variables → Actions — see README.md "Publishing a release");
+# otherwise electron-builder falls back to an ad-hoc/unsigned build, which
+# trips Gatekeeper on a downloaded copy.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: command npm ci
+
+      - name: Build, sign, notarize, package DMG
+        env:
+          # electron-builder imports this cert into a temporary keychain and
+          # signs with it automatically — no manual keychain steps needed.
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # scripts/notarize.js (afterSign hook) and scripts/make-dmg.js both
+          # read these directly; both no-op the notarization step (still
+          # producing a signed-but-unnotarized build) when unset.
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: command npm run dist
+
+      - name: Publish DMG + update manifest to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/latest-mac.yml
