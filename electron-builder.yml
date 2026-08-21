@@ -8,6 +8,14 @@ files:
   - resources/icon.png
 asarUnpack:
   - node_modules/better-sqlite3/**
+# Lets electron-builder embed app-update.yml (pointing electron-updater at
+# GitHub Releases) into the packaged app even though we build with `dir` and
+# never run electron-builder's own `--publish` flow. See scripts/make-dmg.js
+# for how the matching latest-mac.yml release manifest gets generated.
+publish:
+  provider: github
+  owner: jboho
+  repo: md-to-pdf
 afterSign: scripts/notarize.js
 mac:
   icon: resources/icon.icns

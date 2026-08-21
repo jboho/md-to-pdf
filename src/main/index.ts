@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { registerAllHandlers } from './ipc'
 import { getDb, closeDb } from './db/database'
+import { initAutoUpdater } from './updater'
 
 const isDev = !app.isPackaged
 
@@ -17,7 +18,9 @@ function createWindow(): void {
     trafficLightPosition: { x: 15, y: 10 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false
     }
   })
 
@@ -45,6 +48,7 @@ app.whenReady().then(() => {
   registerAllHandlers()
 
   createWindow()
+  initAutoUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
