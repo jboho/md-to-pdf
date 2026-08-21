@@ -1,4 +1,5 @@
 const { execFileSync } = require('node:child_process')
+const crypto = require('node:crypto')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
@@ -41,6 +42,37 @@ function appOutDirFor(arch) {
 // status (Accepted/Invalid) are visible; a non-zero exit throws and aborts.
 function sh(cmd, args) {
   execFileSync(cmd, args, { stdio: ['ignore', 'inherit', 'inherit'] })
+}
+
+// electron-updater's GitHub provider reads this manifest from the release to
+// decide whether a newer version is available and what to download. It must
+// be uploaded alongside the .dmg on every GitHub release for auto-update to
+// work — see README.md's release checklist.
+function writeUpdateManifest(dmgPath, version) {
+  const fileBuffer = fs.readFileSync(dmgPath)
+  const sha512 = crypto.createHash('sha512').update(fileBuffer).digest('base64')
+  const manifest = {
+    version,
+    files: [{ url: path.basename(dmgPath), sha512, size: fileBuffer.length }],
+    path: path.basename(dmgPath),
+    sha512,
+    releaseDate: new Date().toISOString()
+  }
+  const yml = [
+    `version: ${manifest.version}`,
+    'files:',
+    `  - url: ${manifest.files[0].url}`,
+    `    sha512: ${manifest.files[0].sha512}`,
+    `    size: ${manifest.files[0].size}`,
+    `path: ${manifest.path}`,
+    `sha512: ${manifest.sha512}`,
+    `releaseDate: '${manifest.releaseDate}'`,
+    ''
+  ].join('\n')
+
+  const manifestPath = path.join(path.dirname(dmgPath), 'latest-mac.yml')
+  fs.writeFileSync(manifestPath, yml, 'utf8')
+  console.log(`[make-dmg] Wrote update manifest: ${manifestPath}`)
 }
 
 function main() {
@@ -88,6 +120,7 @@ function main() {
       '[make-dmg] Created (not notarized) — set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID to notarize the dmg.'
     )
     console.log(`[make-dmg] Output: ${dmgPath}`)
+    writeUpdateManifest(dmgPath, version)
     return
   }
 
@@ -102,6 +135,7 @@ function main() {
   sh('xcrun', ['stapler', 'staple', dmgPath])
   sh('xcrun', ['stapler', 'validate', dmgPath])
   console.log(`[make-dmg] Notarized + stapled. Output: ${dmgPath}`)
+  writeUpdateManifest(dmgPath, version)
 }
 
 main()

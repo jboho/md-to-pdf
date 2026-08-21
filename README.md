@@ -56,6 +56,22 @@ the `afterSign` hook in `scripts/notarize.js`, which no-ops when the variables
 above are unset. Hardened-runtime entitlements live in
 `resources/entitlements.mac.plist`.
 
+### Publishing a release (auto-update)
+
+The app checks for updates via `electron-updater` against this repo's GitHub
+Releases (`electron-builder.yml`'s `publish` block). `npm run dist` also
+writes `dist/latest-mac.yml` — a manifest with the DMG's sha512/size that
+`electron-updater` reads to detect new versions. To publish a release:
+
+1. Bump `version` in `package.json`.
+2. `npm run dist` to produce `dist/<name>-<version>-<arch>.dmg` and
+   `dist/latest-mac.yml`.
+3. Create a GitHub Release tagged `v<version>` and upload **both** the
+   `.dmg` and `latest-mac.yml` as release assets.
+
+Skipping `latest-mac.yml` silently breaks auto-update for everyone on an
+older version — they won't see an error, updates just never appear.
+
 Optional: set `FEEDBACK_GITHUB_REPO="owner/repo"` to route in-app feedback to a
 different GitHub repository (defaults to `jboho/md-to-pdf`).
 
