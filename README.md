@@ -27,6 +27,18 @@ npm install
 npm run dev
 ```
 
+`postinstall` rebuilds `better-sqlite3` for Electron's Node ABI, which is
+what `dev`/`dist` need — but `npm test` runs under plain Node, a different
+ABI, so every DB-backed test fails with a `NODE_MODULE_VERSION` mismatch
+unless you rebuild for Node first:
+
+```bash
+npm run rebuild:node && npm test   # switches better-sqlite3 to plain-Node ABI
+npm run rebuild                    # switch back to Electron's ABI before npm run dev
+```
+
+CI (`ci.yml`) does this automatically; it's only a manual step when testing locally.
+
 ## Build
 
 ```bash
@@ -61,16 +73,46 @@ above are unset. Hardened-runtime entitlements live in
 The app checks for updates via `electron-updater` against this repo's GitHub
 Releases (`electron-builder.yml`'s `publish` block). `npm run dist` also
 writes `dist/latest-mac.yml` — a manifest with the DMG's sha512/size that
-`electron-updater` reads to detect new versions. To publish a release:
+`electron-updater` reads to detect new versions.
 
-1. Bump `version` in `package.json`.
-2. `npm run dist` to produce `dist/<name>-<version>-<arch>.dmg` and
-   `dist/latest-mac.yml`.
-3. Create a GitHub Release tagged `v<version>` and upload **both** the
-   `.dmg` and `latest-mac.yml` as release assets.
+**`.github/workflows/release.yml` builds and publishes automatically on a
+version tag** — signed + notarized when the repo has these Actions secrets
+configured (**Settings → Secrets and variables → Actions**); with any missing
+it falls back to an unsigned/ad-hoc build, which trips Gatekeeper on a
+downloaded copy.
 
-Skipping `latest-mac.yml` silently breaks auto-update for everyone on an
-older version — they won't see an error, updates just never appear.
+| Secret | Value |
+|---|---|
+| `APPLE_CERTIFICATE_P12_BASE64` | Your `Developer ID Application` cert, exported from Keychain Access as a `.p12` (File → Export Items, set an export password), then `base64 -i cert.p12 \| pbcopy` |
+| `APPLE_CERTIFICATE_PASSWORD` | The export password you set above |
+| `APPLE_ID` | Apple Developer account email |
+| `APPLE_APP_SPECIFIC_PASSWORD` | Generated at [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords |
+| `APPLE_TEAM_ID` | 10-char Team ID |
+
+`CSC_LINK`/`CSC_KEY_PASSWORD` are electron-builder's standard signing-cert
+env vars — it imports the cert into a temporary keychain and signs
+automatically, no manual keychain steps needed. The other three are read
+directly by `scripts/notarize.js` and `scripts/make-dmg.js`, same as a local
+signed build.
+
+To publish:
+
+```bash
+# bump "version" in package.json first, commit it, then:
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+CI builds the DMG, signs/notarizes it if the secrets above are set, and
+attaches both the `.dmg` and `latest-mac.yml` to the GitHub Release for that
+tag. Skipping `latest-mac.yml` silently breaks auto-update for everyone on an
+older version — they won't see an error, updates just never appear — but the
+release workflow always uploads both together.
+
+Without those secrets, cut a **signed + notarized** artifact locally instead:
+export the three `APPLE_*` vars from "Code signing & notarization" above,
+`npm run dist`, then create the GitHub Release and upload
+`dist/*.dmg` + `dist/latest-mac.yml` by hand.
 
 Optional: set `FEEDBACK_GITHUB_REPO="owner/repo"` to route in-app feedback to a
 different GitHub repository (defaults to `jboho/md-to-pdf`).
