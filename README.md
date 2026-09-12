@@ -130,3 +130,7 @@ src/
     ├── components/
     └── hooks/
 ```
+
+## License
+
+[MIT](LICENSE) © Jonathan Boho

@@ -2,6 +2,16 @@
   "name": "md-to-pdf",
   "version": "1.0.1",
   "description": "Batch Markdown to PDF converter with editing, preview, and version tracking",
+  "license": "MIT",
+  "author": "Jonathan Boho",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jboho/md-to-pdf.git"
+  },
+  "homepage": "https://github.com/jboho/md-to-pdf#readme",
+  "bugs": {
+    "url": "https://github.com/jboho/md-to-pdf/issues"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
