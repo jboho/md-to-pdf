@@ -6,7 +6,7 @@
 - [ ] **Flip the repo to public — the release exists but nobody can download it.** `v1.0.1` is published, signed, notarized, and stapled, but `jboho/md-to-pdf` is still `PRIVATE`, so the release assets are owner-only. MIT license + package metadata + repo description/topics landed in PR #12; the visibility switch is a manual owner action (Settings → General → Danger Zone → Change visibility). Then, in order:
   - [ ] Re-enable auto-update: delete the `AUTO_UPDATE_ENABLED = false` guard in `src/main/updater.ts:12` (and its explanatory comment). It was switched off only because electron-updater 404s against a private release feed with no token — going public removes the cause. The feed itself is already correct: `v1.0.1` shipped `latest-mac.yml` alongside the `.dmg`.
   - [ ] Cut `1.0.2` (bump `package.json`, commit, `git tag v1.0.2 && git push origin v1.0.2`) so there is a release *above* 1.0.1 for an installed 1.0.1 build to actually discover. Auto-update cannot be verified end-to-end until two public releases exist.
-  - [ ] Merge PR #13 (`softprops/action-gh-release` v2 → v3) before that tag, so the last Node 20 runtime pin is gone from the release path.
+  - [x] Merge PR #13 (`softprops/action-gh-release` v2 → v3) before that tag, so the last Node 20 runtime pin is gone from the release path. — DONE 2026-09-13: PR #13 merged; see Notes.
 
 - [x] Publish a release — DONE 2026-09-12: `v1.0.1` is live at `40806bc` with `MD.to.PDF-1.0.1-arm64.dmg` (135.6 MB) + `latest-mac.yml`. See Notes: "first release published (2026-09-12)".
   - [x] Add the five Actions secrets — all five present (`APPLE_CERTIFICATE_P12_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`)
