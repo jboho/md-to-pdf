@@ -40,8 +40,18 @@ export const dialog = {
 }
 
 export const shell = {
-  openPath: async (): Promise<string> => '',
-  openExternal: async (): Promise<void> => undefined
+  openPath: async (_path: string): Promise<string> => '',
+  openExternal: async (_url: string): Promise<void> => undefined
+}
+
+export const session = {
+  defaultSession: {
+    setPermissionRequestHandler: (): void => undefined
+  },
+  fromPartition: () => ({
+    webRequest: { onBeforeRequest: (): void => undefined },
+    setPermissionRequestHandler: (): void => undefined
+  })
 }
 
 export class BrowserWindow {
@@ -63,4 +73,4 @@ export const ipcRenderer = {
   removeListener: (): void => undefined
 }
 
-export default { app, ipcMain, dialog, shell, BrowserWindow, contextBridge, ipcRenderer }
+export default { app, ipcMain, dialog, shell, session, BrowserWindow, contextBridge, ipcRenderer }

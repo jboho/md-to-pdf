@@ -6,6 +6,7 @@ import { taskRepository } from '../db/repositories/task.repository'
 import { getThemeCss } from '../pdf/themes'
 import { generatePdf, generateBatch, cancelBatch, getHiddenWindow } from '../pdf/generator'
 import { buildHtml } from '../pdf/html-builder'
+import { isOpenableDirectory } from '../pdf/output-path'
 import type { QuickConvertInput } from '../../preload/types'
 
 export function registerPdfHandlers(): void {
@@ -44,9 +45,13 @@ export function registerPdfHandlers(): void {
   ipcMain.handle('pdf:open-output-dir', async (_event, taskId: string) => {
     const task = taskRepository.findById(taskId)
     if (!task) throw new Error(`Task not found: ${taskId}`)
-    if (task.outputDir) {
-      shell.openPath(task.outputDir)
+    if (!task.outputDir) return
+    // outputDir arrives from the renderer; never let openPath launch an app or file.
+    if (!isOpenableDirectory(task.outputDir)) {
+      throw new Error(`Output folder is missing or not a folder: ${task.outputDir}`)
     }
+    const error = await shell.openPath(task.outputDir)
+    if (error) throw new Error(error)
   })
 
   ipcMain.handle('pdf:quick-convert', async (_event, input: QuickConvertInput) => {

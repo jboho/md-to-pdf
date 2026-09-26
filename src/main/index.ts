@@ -1,8 +1,9 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { registerAllHandlers } from './ipc'
 import { getDb, closeDb } from './db/database'
 import { initAutoUpdater } from './updater'
+import { installSecurityGuards, openLinksExternally } from './security'
 
 const isDev = !app.isPackaged
 
@@ -28,10 +29,7 @@ function createWindow(): void {
     mainWindow.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
+  openLinksExternally(mainWindow.webContents)
 
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -41,6 +39,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  installSecurityGuards()
+
   // Initialize database
   getDb()
 

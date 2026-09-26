@@ -32,9 +32,10 @@ TypeScript throughout; electron-vite; Electron ^35 (main/preload/renderer). Rend
 ## Architecture
 
 - `src/main/` — Electron main process:
-  - `pdf/` — `generator.ts` (offscreen window + printToPDF, batch cancellation via `activeBatches`), `html-builder.ts` (MD→HTML+CSS, strict CSP `script-src 'none'` — inline scripts won't run in generated PDFs), `themes/index.ts`
+  - `pdf/` — `generator.ts` (offscreen window + printToPDF in an offline `pdf-render` session that cancels non-`file:`/`data:` requests, batch cancellation via `activeBatches`), `output-path.ts` (PDF names and task folders reduced to one path segment; `openOutputDir` only opens real, non-bundle folders), `html-builder.ts` (MD→HTML+CSS, strict CSP `script-src 'none'` — inline scripts won't run in generated PDFs), `themes/index.ts`
   - `db/` — `database.ts` (singleton, WAL, `userData/md-to-pdf.db`, numbered migrations tracked in `_migrations`, run on first `getDb()`; tests inject in-memory via `setDbInstance()`), `migrations/00{1,2,3}_*.ts`, `repositories/*.repository.ts`
   - `ipc/index.ts` — `registerAllHandlers()` wires per-domain handlers (task/file/version/style/dialog/pdf/feedback)
+  - `security.ts` — app-wide guards: no navigation off the loaded page, no `window.open`, no `<webview>`, all permission requests denied. The preload bridge attaches to any page a window reaches, so keep these. The main window opts in to sending http(s)/mailto links to the browser via `openLinksExternally`.
   - `index.ts` — app entry (`main` → `./out/main/index.js`)
 - `src/preload/` — typed `contextBridge` API over `ipcRenderer.invoke`; `types.ts` is the shared type source of truth
 - `src/renderer/src/` — React frontend: `router.tsx`, `pages/` (Dashboard, TaskDetail, EditorPage, VersionsPage, StylesPage, QuickConvertPage), `components/`, `hooks/`. Alias `@` → `src/renderer/src`; tests alias `electron` → `test/mocks/electron.ts`.

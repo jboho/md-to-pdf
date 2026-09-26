@@ -1,13 +1,31 @@
-import { BrowserWindow, app } from 'electron'
+import { BrowserWindow, app, session, type Session } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildHtml } from './html-builder'
+import { pdfFilenameFor, safePathSegment } from './output-path'
 import { fileRepository } from '../db/repositories/file.repository'
 import { taskRepository } from '../db/repositories/task.repository'
 import type { Task, TaskFile, BatchProgress, PdfFileProgress } from '../../preload/types'
 
 let hiddenWindow: BrowserWindow | null = null
+let renderSession: Session | null = null
 const activeBatches = new Map<string, { cancelled: boolean }>()
+
+// Converted markdown can carry raw HTML (e.g. a meta refresh). The renderer
+// gets its own in-memory session that refuses every request that isn't a local
+// file or inline data, so conversion stays offline whatever the document says.
+function getRenderSession(): Session {
+  if (!renderSession) {
+    renderSession = session.fromPartition('pdf-render')
+    renderSession.webRequest.onBeforeRequest((details, callback) => {
+      callback({ cancel: !/^(file|data):/i.test(details.url) })
+    })
+    renderSession.setPermissionRequestHandler((_contents, _permission, callback) => {
+      callback(false)
+    })
+  }
+  return renderSession
+}
 
 export function getHiddenWindow(): BrowserWindow {
   if (!hiddenWindow || hiddenWindow.isDestroyed()) {
@@ -17,8 +35,10 @@ export function getHiddenWindow(): BrowserWindow {
       height: 600,
       webPreferences: {
         offscreen: true,
+        sandbox: true,
         nodeIntegration: false,
-        contextIsolation: true
+        contextIsolation: true,
+        session: getRenderSession()
       }
     })
   }
@@ -27,8 +47,7 @@ export function getHiddenWindow(): BrowserWindow {
 
 function getOutputDir(task: Task): string {
   if (task.outputDir) return task.outputDir
-  const dir = path.join(app.getPath('documents'), 'MD to PDF', task.name)
-  return dir
+  return path.join(app.getPath('documents'), 'MD to PDF', safePathSegment(task.name, 'Untitled'))
 }
 
 async function generateSinglePdf(
@@ -68,8 +87,7 @@ async function generateSinglePdf(
   const outputDir = getOutputDir(task)
   fs.mkdirSync(outputDir, { recursive: true })
 
-  const outputFilename = file.filename.replace(/\.(md|markdown)$/i, '.pdf')
-  const outputPath = path.join(outputDir, outputFilename)
+  const outputPath = path.join(outputDir, pdfFilenameFor(file.filename))
   fs.writeFileSync(outputPath, pdfBuffer)
 
   return outputPath
