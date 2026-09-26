@@ -121,10 +121,25 @@ jobs:
               exit 1
             }
           done
+          # Every file latest-mac.yml points at must exist and match an upload
+          # glob below, or auto-update breaks for installed copies with no error
+          # on this side. MacUpdater installs only from the zip.
+          URLS="$(sed -n 's/^  - url: //p' dist/latest-mac.yml)"
+          grep -q '\.zip$' <<<"$URLS" || {
+            echo "::error::latest-mac.yml lists no .zip; MacUpdater cannot install from a dmg."
+            exit 1
+          }
+          for f in $URLS; do
+            case "$f" in
+              *.dmg|*.zip) test -f "dist/$f" || { echo "::error::latest-mac.yml lists missing dist/$f"; exit 1; } ;;
+              *) echo "::error::latest-mac.yml lists $f, which is not uploaded"; exit 1 ;;
+            esac
+          done
 
-      - name: Publish DMG + update manifest to the GitHub Release
+      - name: Publish DMG, update zip and manifest to the GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
             dist/*.dmg
+            dist/*.zip
             dist/latest-mac.yml

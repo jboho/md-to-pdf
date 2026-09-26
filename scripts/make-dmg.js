@@ -5,8 +5,9 @@ const os = require('node:os')
 const path = require('node:path')
 
 /**
- * Builds the distributable .dmg from the already signed + notarized .app that
- * `electron-builder --mac dir` produced in dist/mac-<arch>/.
+ * Builds the distributable .dmg, the .zip electron-updater installs from, and
+ * the latest-mac.yml update manifest, from the already signed + notarized .app
+ * that `electron-builder --mac dir` produced in dist/mac-<arch>/.
  *
  * Why this exists instead of electron-builder's built-in `dmg` target:
  * electron-builder runs `hdiutil create -srcfolder <the live appOutDir>`, and
@@ -44,35 +45,60 @@ function sh(cmd, args) {
   execFileSync(cmd, args, { stdio: ['ignore', 'inherit', 'inherit'] })
 }
 
-// electron-updater's GitHub provider reads this manifest from the release to
-// decide whether a newer version is available and what to download. It must
-// be uploaded alongside the .dmg on every GitHub release for auto-update to
-// work — see README.md's release checklist.
-function writeUpdateManifest(dmgPath, version) {
-  const fileBuffer = fs.readFileSync(dmgPath)
-  const sha512 = crypto.createHash('sha512').update(fileBuffer).digest('base64')
-  const manifest = {
-    version,
-    files: [{ url: path.basename(dmgPath), sha512, size: fileBuffer.length }],
-    path: path.basename(dmgPath),
-    sha512,
-    releaseDate: new Date().toISOString()
+// GitHub stores an uploaded asset with spaces turned into dots, while
+// electron-updater requests the manifest's url with spaces turned into dashes,
+// so a name with a space can never be downloaded. Use dashes up front.
+function artifactBaseName(productName) {
+  return productName.trim().replace(/\s+/g, '-')
+}
+
+function fileEntry(filePath) {
+  const buffer = fs.readFileSync(filePath)
+  return {
+    url: path.basename(filePath),
+    sha512: crypto.createHash('sha512').update(buffer).digest('base64'),
+    size: buffer.length
   }
-  const yml = [
-    `version: ${manifest.version}`,
+}
+
+// electron-updater's GitHub provider reads latest-mac.yml from the release to
+// decide whether a newer version exists and what to download. MacUpdater only
+// installs from a .zip (ERR_UPDATER_ZIP_FILE_NOT_FOUND otherwise), so the zip
+// comes first and is the legacy top-level `path`; the dmg is listed for
+// completeness. Both files and the manifest must be uploaded to every release.
+function buildUpdateManifest(version, entries, releaseDate) {
+  if (!entries.some((e) => e.url.endsWith('.zip'))) {
+    throw new Error('latest-mac.yml needs a .zip entry: MacUpdater cannot install from a dmg')
+  }
+  for (const e of entries) {
+    if (/\s/.test(e.url)) throw new Error(`Update file name contains whitespace: ${e.url}`)
+  }
+  const [primary] = entries
+  return [
+    `version: ${version}`,
     'files:',
-    `  - url: ${manifest.files[0].url}`,
-    `    sha512: ${manifest.files[0].sha512}`,
-    `    size: ${manifest.files[0].size}`,
-    `path: ${manifest.path}`,
-    `sha512: ${manifest.sha512}`,
-    `releaseDate: '${manifest.releaseDate}'`,
+    ...entries.flatMap((e) => [`  - url: ${e.url}`, `    sha512: ${e.sha512}`, `    size: ${e.size}`]),
+    `path: ${primary.url}`,
+    `sha512: ${primary.sha512}`,
+    `releaseDate: '${releaseDate}'`,
     ''
   ].join('\n')
+}
 
-  const manifestPath = path.join(path.dirname(dmgPath), 'latest-mac.yml')
+function writeUpdateManifest(distDir, version, filePaths) {
+  const yml = buildUpdateManifest(version, filePaths.map(fileEntry), new Date().toISOString())
+  const manifestPath = path.join(distDir, 'latest-mac.yml')
   fs.writeFileSync(manifestPath, yml, 'utf8')
   console.log(`[make-dmg] Wrote update manifest: ${manifestPath}`)
+}
+
+// The zip electron-updater installs from. Made with ditto (not `zip`) so the
+// bundle's symlinks, extended attributes and stapled ticket survive, which
+// Squirrel.Mac needs to accept the update's code signature.
+function makeUpdateZip(appPath, zipPath) {
+  console.log(`[make-dmg] Creating ${path.basename(zipPath)}...`)
+  fs.rmSync(zipPath, { force: true })
+  sh('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', appPath, zipPath])
 }
 
 function main() {
@@ -87,7 +113,10 @@ function main() {
     )
   }
 
-  const dmgPath = path.join(ROOT, 'dist', `${productName}-${version}-${arch}.dmg`)
+  const distDir = path.join(ROOT, 'dist')
+  const baseName = `${artifactBaseName(productName)}-${version}-${arch}`
+  const dmgPath = path.join(distDir, `${baseName}.dmg`)
+  const zipPath = path.join(distDir, `${baseName}.zip`)
   const volName = `${productName} ${version}-${arch}`
 
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'md-to-pdf-dmg-'))
@@ -120,7 +149,8 @@ function main() {
       '[make-dmg] Created (not notarized) — set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID to notarize the dmg.'
     )
     console.log(`[make-dmg] Output: ${dmgPath}`)
-    writeUpdateManifest(dmgPath, version)
+    makeUpdateZip(appPath, zipPath)
+    writeUpdateManifest(distDir, version, [zipPath, dmgPath])
     return
   }
 
@@ -135,7 +165,10 @@ function main() {
   sh('xcrun', ['stapler', 'staple', dmgPath])
   sh('xcrun', ['stapler', 'validate', dmgPath])
   console.log(`[make-dmg] Notarized + stapled. Output: ${dmgPath}`)
-  writeUpdateManifest(dmgPath, version)
+  makeUpdateZip(appPath, zipPath)
+  writeUpdateManifest(distDir, version, [zipPath, dmgPath])
 }
 
-main()
+module.exports = { readProductName, artifactBaseName, fileEntry, buildUpdateManifest }
+
+if (require.main === module) main()
