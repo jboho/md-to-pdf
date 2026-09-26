@@ -75,11 +75,11 @@ Releases (`electron-builder.yml`'s `publish` block). `npm run dist` also
 writes `dist/latest-mac.yml` — a manifest with the DMG's sha512/size that
 `electron-updater` reads to detect new versions.
 
-**`.github/workflows/release.yml` builds and publishes automatically on a
-version tag** — signed + notarized when the repo has these Actions secrets
-configured (**Settings → Secrets and variables → Actions**); with any missing
-it falls back to an unsigned/ad-hoc build, which trips Gatekeeper on a
-downloaded copy.
+**`.github/workflows/release.yml` builds, signs, notarizes and publishes on a
+version tag.** It reads these secrets from the `release` environment
+(**Settings → Environments → release**), which only `v*` tags can deploy to.
+If a secret is missing or the result isn't Developer ID signed, the workflow
+fails instead of publishing an unsigned build.
 
 | Secret | Value |
 |---|---|
@@ -89,11 +89,11 @@ downloaded copy.
 | `APPLE_APP_SPECIFIC_PASSWORD` | Generated at [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords |
 | `APPLE_TEAM_ID` | 10-char Team ID |
 
-`CSC_LINK`/`CSC_KEY_PASSWORD` are electron-builder's standard signing-cert
-env vars — it imports the cert into a temporary keychain and signs
-automatically, no manual keychain steps needed. The other three are read
-directly by `scripts/notarize.js` and `scripts/make-dmg.js`, same as a local
-signed build.
+The workflow imports the certificate into its own keychain and lets
+electron-builder find the identity there, rather than passing `CSC_LINK`
+(electron-builder's keychain import fails on current macOS runners). The
+other three are read by `scripts/notarize.js` and `scripts/make-dmg.js`, same
+as a local signed build. To set one: `gh secret set APPLE_TEAM_ID --env release`.
 
 To publish:
 
@@ -103,7 +103,7 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-CI builds the DMG, signs/notarizes it if the secrets above are set, and
+CI builds, signs and notarizes the DMG, and
 attaches both the `.dmg` and `latest-mac.yml` to the GitHub Release for that
 tag. Skipping `latest-mac.yml` silently breaks auto-update for everyone on an
 older version — they won't see an error, updates just never appear — but the

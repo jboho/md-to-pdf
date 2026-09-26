@@ -4,23 +4,34 @@ name: Release
 # Bump package.json "version", commit it, then:
 #   git tag vX.Y.Z && git push origin vX.Y.Z
 #
-# Signed + notarized when the repo's signing secrets are configured (Settings
-# → Secrets and variables → Actions — see README.md "Publishing a release").
-# The "Verify" step fails the build if the result is not Developer ID signed,
-# so a misconfigured secret can no longer silently ship an unsigned DMG.
+# Signing secrets come from the `release` environment (see README.md
+# "Publishing a release"). The "Verify" step fails the build unless the app is
+# Developer ID signed, notarized and fused, so a misconfigured secret can't
+# silently ship a DMG that Gatekeeper blocks.
 on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: write
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release-mac:
     runs-on: macos-latest
+    timeout-minutes: 60
+    # The Apple signing secrets live in this environment, and only v* tags
+    # may deploy to it, so a workflow run from any branch cannot read them.
+    environment: release
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
       - run: command npm ci
@@ -92,6 +103,10 @@ jobs:
             echo "::error::$APP is not Developer ID signed (ad-hoc/unsigned fallback)."
             exit 1
           }
+          # scripts/notarize.js and make-dmg.js skip notarization when an
+          # APPLE_* secret is missing, which would ship a DMG Gatekeeper blocks.
+          xcrun stapler validate "$APP"
+          for dmg in dist/*.dmg; do xcrun stapler validate "$dmg"; done
           # electronFuses in electron-builder.yml; an unflipped fuse leaves
           # ELECTRON_RUN_AS_NODE etc. able to run arbitrary code as this app.
           FUSES="$(npx --no-install electron-fuses read --app "$APP")"
@@ -108,7 +123,7 @@ jobs:
           done
 
       - name: Publish DMG + update manifest to the GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
             dist/*.dmg

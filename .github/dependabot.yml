@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Let a new release sit a week before proposing it, so a hijacked publish
+    # is more likely to be caught and yanked first. Security updates skip this.
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # 13.x segfaults on `new Database()` under Node 22 on darwin-arm64
+      # (WiseLibs/better-sqlite3#1514).
+      - dependency-name: better-sqlite3
+        versions: [">=13"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
