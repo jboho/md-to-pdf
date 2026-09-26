@@ -16,6 +16,9 @@ updates:
       # (WiseLibs/better-sqlite3#1514).
       - dependency-name: better-sqlite3
         versions: [">=13"]
+      # 6.x needs vite 8; electron-vite (5.0.0 at most) caps vite at 7.
+      - dependency-name: "@vitejs/plugin-react"
+        versions: [">=6"]
 
   - package-ecosystem: github-actions
     directory: /

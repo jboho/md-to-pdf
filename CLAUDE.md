@@ -27,7 +27,7 @@ Electron desktop app (macOS-focused) that converts Markdown to PDF: batch conver
 
 ## Stack
 
-TypeScript throughout; electron-vite; Electron ^44 (main/preload/renderer). Renderer: React 19, react-router-dom 7 (`createHashRouter`), Tailwind v4, shadcn/ui + Radix, lucide-react, sonner. Editor: CodeMirror 6; preview also react-markdown + remark-gfm + rehype-*. PDF: `marked` ^15 + Electron `printToPDF`. Storage: `better-sqlite3` ^12; diffs via `diff` ^9. Auto-update: `electron-updater` against this repo's GitHub Releases.
+TypeScript throughout; electron-vite; Electron ^44 (main/preload/renderer). Renderer: React 19, react-router-dom 7 (`createHashRouter`), Tailwind v4, shadcn/ui + Radix, lucide-react, sonner. Editor: CodeMirror 6; preview also react-markdown + remark-gfm + rehype-*. PDF: `marked` ^18 (ESM-only, so bundled into main via `externalizeDepsPlugin({ exclude })` in `electron.vite.config.ts`; every other dep is required from `node_modules` at runtime) + Electron `printToPDF`. Storage: `better-sqlite3` ^12; diffs via `diff` ^9. Auto-update: `electron-updater` against this repo's GitHub Releases.
 
 ## Architecture
 
