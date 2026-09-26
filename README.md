@@ -12,6 +12,14 @@ Electron desktop app for converting Markdown files to PDF. Supports batch conver
 - **Feedback** — in-app feedback that files a prefilled GitHub issue (also stored locally)
 - **Offline** — no network required; runs entirely on-device
 
+## Requirements
+
+- macOS 13 (Ventura) or later. Electron 44 dropped macOS 12, and the app's
+  `Info.plist` declares the minimum so Finder won't launch it on older systems.
+- Apple silicon. Release builds are arm64 only.
+- To build from source: Node.js 22.12 or later and Xcode Command Line Tools
+  (`better-sqlite3` compiles from source).
+
 ## Stack
 
 - Electron + electron-vite
@@ -71,9 +79,12 @@ above are unset. Hardened-runtime entitlements live in
 ### Publishing a release (auto-update)
 
 The app checks for updates via `electron-updater` against this repo's GitHub
-Releases (`electron-builder.yml`'s `publish` block). `npm run dist` also
-writes `dist/latest-mac.yml` — a manifest with the DMG's sha512/size that
-`electron-updater` reads to detect new versions.
+Releases (`electron-builder.yml`'s `publish` block). Besides the `.dmg`,
+`npm run dist` writes `dist/MD-to-PDF-<version>-<arch>.zip` (the signed app,
+which is what `electron-updater` installs on macOS) and `dist/latest-mac.yml`,
+the manifest `electron-updater` reads to detect new versions. File names use
+dashes, not spaces: GitHub renames spaces in uploaded assets to dots, which
+the updater can't match.
 
 **`.github/workflows/release.yml` builds, signs, notarizes and publishes on a
 version tag.** It reads these secrets from the `release` environment
@@ -103,16 +114,17 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-CI builds, signs and notarizes the DMG, and
-attaches both the `.dmg` and `latest-mac.yml` to the GitHub Release for that
-tag. Skipping `latest-mac.yml` silently breaks auto-update for everyone on an
-older version — they won't see an error, updates just never appear — but the
-release workflow always uploads both together.
+CI builds, signs and notarizes the app and DMG, checks that every file
+`latest-mac.yml` lists exists, and attaches the `.dmg`, `.zip` and
+`latest-mac.yml` to the GitHub Release for that tag. Leaving out the `.zip` or
+`latest-mac.yml` silently breaks auto-update for everyone on an older version
+(they see no error; updates just never appear), which is why the workflow
+uploads all three together.
 
 Without those secrets, cut a **signed + notarized** artifact locally instead:
 export the three `APPLE_*` vars from "Code signing & notarization" above,
 `npm run dist`, then create the GitHub Release and upload
-`dist/*.dmg` + `dist/latest-mac.yml` by hand.
+`dist/*.dmg`, `dist/*.zip` and `dist/latest-mac.yml` by hand.
 
 Optional: set `FEEDBACK_GITHUB_REPO="owner/repo"` to route in-app feedback to a
 different GitHub repository (defaults to `jboho/md-to-pdf`).

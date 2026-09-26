@@ -54,7 +54,15 @@ export const session = {
   })
 }
 
+export const screen = {
+  getPrimaryDisplay: () => ({ scaleFactor: 2 })
+}
+
 export class BrowserWindow {
+  static lastOptions: unknown
+  constructor(options?: unknown) {
+    BrowserWindow.lastOptions = options
+  }
   static getAllWindows(): BrowserWindow[] {
     return []
   }
@@ -73,4 +81,4 @@ export const ipcRenderer = {
   removeListener: (): void => undefined
 }
 
-export default { app, ipcMain, dialog, shell, session, BrowserWindow, contextBridge, ipcRenderer }
+export default { app, ipcMain, dialog, shell, session, screen, BrowserWindow, contextBridge, ipcRenderer }

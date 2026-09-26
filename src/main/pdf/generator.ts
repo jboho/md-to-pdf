@@ -1,4 +1,4 @@
-import { BrowserWindow, app, session, type Session } from 'electron'
+import { BrowserWindow, app, screen, session, type Session } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildHtml } from './html-builder'
@@ -34,7 +34,10 @@ export function getHiddenWindow(): BrowserWindow {
       width: 800,
       height: 600,
       webPreferences: {
-        offscreen: true,
+        // Electron 42 changed the offscreen default from the primary display's
+        // scale factor to a fixed 1.0. Pin the old value so PDFs render (images
+        // and any resolution-dependent CSS) the same as before the upgrade.
+        offscreen: { deviceScaleFactor: screen.getPrimaryDisplay().scaleFactor },
         sandbox: true,
         nodeIntegration: false,
         contextIsolation: true,
