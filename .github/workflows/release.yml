@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - run: command npm ci
 
       # electron-builder's own CSC_LINK keychain import is broken on current
@@ -92,6 +92,20 @@ jobs:
             echo "::error::$APP is not Developer ID signed (ad-hoc/unsigned fallback)."
             exit 1
           }
+          # electronFuses in electron-builder.yml; an unflipped fuse leaves
+          # ELECTRON_RUN_AS_NODE etc. able to run arbitrary code as this app.
+          FUSES="$(npx --no-install electron-fuses read --app "$APP")"
+          echo "$FUSES"
+          for fuse in "RunAsNode is Disabled" \
+                      "EnableNodeOptionsEnvironmentVariable is Disabled" \
+                      "EnableNodeCliInspectArguments is Disabled" \
+                      "OnlyLoadAppFromAsar is Enabled" \
+                      "EnableEmbeddedAsarIntegrityValidation is Enabled"; do
+            grep -qF "$fuse" <<<"$FUSES" || {
+              echo "::error::Expected fuse state missing: $fuse"
+              exit 1
+            }
+          done
 
       - name: Publish DMG + update manifest to the GitHub Release
         uses: softprops/action-gh-release@v3

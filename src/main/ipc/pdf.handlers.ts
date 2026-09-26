@@ -70,7 +70,6 @@ export function registerPdfHandlers(): void {
       printBackground: true,
       pageSize: input.pageSize as Electron.PrintToPDFOptions['pageSize'],
       margins: {
-        marginType: 'custom',
         top: input.marginTop / 25.4,
         bottom: input.marginBottom / 25.4,
         left: input.marginLeft / 25.4,

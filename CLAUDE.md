@@ -12,9 +12,9 @@ Electron desktop app (macOS-focused) that converts Markdown to PDF: batch conver
 
 ## Commands
 
-**npm** (`package-lock.json`; no pnpm/yarn). Node 20 in CI.
+**npm** (`package-lock.json`; no pnpm/yarn). Node >=22.12 (`engines`; Electron 44 tooling requires it), 22 in CI.
 
-- `npm run dev` — `electron-vite dev`
+- `npm run dev` — `electron-vite dev` (`predev` runs `install-electron`: since Electron 42 the package no longer downloads its binary on install, and electron-vite needs it)
 - `npm run build` — `electron-vite build` (no installer)
 - `npm run dist` — build + `electron-builder --mac dir` + `node scripts/make-dmg.js` (`.dmg`; macOS host)
 - `npm test` — Vitest (`npm run test:watch` for watch)
@@ -27,7 +27,7 @@ Electron desktop app (macOS-focused) that converts Markdown to PDF: batch conver
 
 ## Stack
 
-TypeScript throughout; electron-vite; Electron ^35 (main/preload/renderer). Renderer: React 19, react-router-dom 7 (`createHashRouter`), Tailwind v4, shadcn/ui + Radix, lucide-react, sonner. Editor: CodeMirror 6; preview also react-markdown + remark-gfm + rehype-*. PDF: `marked` ^15 + Electron `printToPDF`. Storage: `better-sqlite3` ^11; diffs via `diff` ^7. Auto-update: `electron-updater` against this repo's GitHub Releases.
+TypeScript throughout; electron-vite; Electron ^44 (main/preload/renderer). Renderer: React 19, react-router-dom 7 (`createHashRouter`), Tailwind v4, shadcn/ui + Radix, lucide-react, sonner. Editor: CodeMirror 6; preview also react-markdown + remark-gfm + rehype-*. PDF: `marked` ^15 + Electron `printToPDF`. Storage: `better-sqlite3` ^12; diffs via `diff` ^9. Auto-update: `electron-updater` against this repo's GitHub Releases.
 
 ## Architecture
 
@@ -43,7 +43,10 @@ TypeScript throughout; electron-vite; Electron ^35 (main/preload/renderer). Rend
 ## Conventions / gotchas
 
 - DB ABI dance — see Commands; the biggest local-dev footgun.
+- better-sqlite3 stays on 12.x: 13.0.3 segfaults on `new Database()` under Node 22 on darwin-arm64 (WiseLibs/better-sqlite3#1514). 12.x ships no Electron 44 prebuilds, so `rebuild` compiles from source (Xcode CLT); a GNU `libtool` ahead of `/usr/bin/libtool` on PATH fails it with `unrecognized option -static`.
+- `electronFuses` in `electron-builder.yml` disables RunAsNode, NODE_OPTIONS and `--inspect` and enforces asar-only loading with integrity validation; entitlements are `allow-jit` only.
 - Env: `FEEDBACK_GITHUB_REPO` (default `jboho/md-to-pdf`, `src/main/config.ts`) routes in-app feedback issues. macOS signing/notarization: `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (+ CI `APPLE_CERTIFICATE_P12_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, electron-builder `CSC_LINK`/`CSC_KEY_PASSWORD`). No `.env.example`.
+- macOS 13+ only (Electron 44; `mac.minimumSystemVersion`). Open dialogs pass a `defaultPath` (last folder this session, else Documents) because Electron 43+ otherwise opens Downloads.
 - macOS-only builds: `dist` uses `--mac`; `scripts/notarize.js` (afterSign, no-ops when Apple vars unset); entitlements `resources/entitlements.mac.plist`; config `electron-builder.yml`.
 - Releases/auto-update: push `vX.Y.Z` tag → `.github/workflows/release.yml` builds/signs/notarizes and attaches both `.dmg` and `dist/latest-mac.yml` (omitting the yml silently breaks auto-update).
 - Tests colocated as `*.test.ts` under `src/**` plus `test/**`; Vitest `environment: node`, `globals: true`. `.gitignore` excludes `*.db`, `out/`, `dist/`, `.claude/`.

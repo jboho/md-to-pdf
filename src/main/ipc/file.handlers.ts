@@ -1,9 +1,13 @@
-import { ipcMain, dialog } from 'electron'
+import { app, ipcMain, dialog } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileRepository } from '../db/repositories/file.repository'
 import { versionRepository } from '../db/repositories/version.repository'
 import type { CreateFileInput, UpdateFileInput, FileStatus } from '../../preload/types'
+
+// Since Electron 43 a dialog without defaultPath opens in Downloads and the OS
+// no longer restores the last folder, so remember it for the session.
+let lastImportDir: string | undefined
 
 export function registerFileHandlers(): void {
   ipcMain.handle('file:list-by-task', async (_event, taskId: string) => {
@@ -51,12 +55,15 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:import-from-disk', async (_event, taskId: string) => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
-      filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }]
+      filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
+      defaultPath: lastImportDir ?? app.getPath('documents')
     })
 
     if (result.canceled || result.filePaths.length === 0) {
       return []
     }
+
+    lastImportDir = path.dirname(result.filePaths[0])
 
     const inputs: CreateFileInput[] = result.filePaths.map((filePath) => ({
       taskId,

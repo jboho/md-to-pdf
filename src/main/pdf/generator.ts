@@ -69,7 +69,6 @@ async function generateSinglePdf(
     printBackground: true,
     pageSize: task.pageSize as Electron.PrintToPDFOptions['pageSize'],
     margins: {
-      marginType: 'custom',
       top: task.marginTop / 25.4,
       bottom: task.marginBottom / 25.4,
       left: task.marginLeft / 25.4,

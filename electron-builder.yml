@@ -17,9 +17,22 @@ publish:
   owner: jboho
   repo: md-to-pdf
 afterSign: scripts/notarize.js
+# Close the ways a signed build can be made to run code other than the
+# packaged app: ELECTRON_RUN_AS_NODE, NODE_OPTIONS, --inspect, a loose app/
+# folder next to app.asar, and a modified app.asar. grantFileProtocolExtraPrivileges
+# stays on because the renderer and PDF pages load over file://.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  enableEmbeddedAsarIntegrityValidation: true
 mac:
   icon: resources/icon.icns
   category: public.app-category.productivity
+  # Electron 44 dropped macOS 12; say so in Info.plist so Finder refuses to
+  # launch it on older systems instead of crashing.
+  minimumSystemVersion: "13.0"
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: resources/entitlements.mac.plist
