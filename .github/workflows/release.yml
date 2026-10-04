@@ -121,6 +121,12 @@ jobs:
               exit 1
             }
           done
+          # electron-updater finds the release feed through this file; without
+          # it an installed copy can never see a newer release.
+          grep -qx 'provider: github' "$APP/Contents/Resources/app-update.yml" || {
+            echo "::error::$APP has no GitHub app-update.yml in Contents/Resources."
+            exit 1
+          }
           # Every file latest-mac.yml points at must exist and match an upload
           # glob below, or auto-update breaks for installed copies with no error
           # on this side. MacUpdater installs only from the zip.

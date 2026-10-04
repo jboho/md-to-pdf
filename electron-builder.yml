@@ -8,10 +8,14 @@ files:
   - resources/icon.png
 asarUnpack:
   - node_modules/better-sqlite3/**
-# Lets electron-builder embed app-update.yml (pointing electron-updater at
-# GitHub Releases) into the packaged app even though we build with `dir` and
-# never run electron-builder's own `--publish` flow. See scripts/make-dmg.js
-# for how the matching latest-mac.yml release manifest gets generated.
+# electron-updater reads Contents/Resources/app-update.yml to find the release
+# feed. electron-builder writes that file on macOS only for dmg/zip targets, and
+# we build with `dir` (see mac.target), so it is committed and copied in here.
+# test/app-update-config.test.ts keeps it in step with the publish block below.
+# scripts/make-dmg.js writes the matching latest-mac.yml release manifest.
+extraResources:
+  - from: resources/app-update.yml
+    to: app-update.yml
 publish:
   provider: github
   owner: jboho
