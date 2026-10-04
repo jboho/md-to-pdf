@@ -1,0 +1,4 @@
+owner: jboho
+repo: md-to-pdf
+provider: github
+updaterCacheDirName: md-to-pdf-updater
