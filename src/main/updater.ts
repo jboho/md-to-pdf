@@ -4,14 +4,7 @@ import { autoUpdater } from 'electron-updater'
 autoUpdater.autoDownload = false
 autoUpdater.autoInstallOnAppQuit = true
 
-// Auto-update is intentionally disabled until distribution is settled. The
-// repo is private, so electron-updater 404s against the GitHub Releases feed
-// with no token; 1.0.1 ships as a manually distributed DMG. Re-enable by
-// removing this guard once the repo is public or the feed is authenticated.
-const AUTO_UPDATE_ENABLED = false
-
 export function initAutoUpdater(): void {
-  if (!AUTO_UPDATE_ENABLED) return
   if (!app.isPackaged) return
 
   autoUpdater.on('update-available', (info) => {
