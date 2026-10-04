@@ -3,7 +3,7 @@
 > Goal: An Electron desktop app for batch Markdown→PDF conversion with a built-in editor, live preview, CSS theme customization, and per-document version history.
 
 ## Current next action
-- [ ] Optional: archive the private `jboho/md-to-pdf-archive` (old history before the rewrite; still has 6 open Dependabot PRs) with `gh repo archive jboho/md-to-pdf-archive`.
+- [x] Archive the private `jboho/md-to-pdf-archive` (old history before the rewrite). — DONE 2026-10-04: archived, so it is read-only; its 6 open Dependabot PRs stay frozen.
 
 - [x] **Flip the repo to public.** — DONE 2026-10-04: `jboho/md-to-pdf` is public; release assets and `releases.atom` download without auth. Before the flip, every ref that would go public (main, tags, 21 `refs/pull/*/head`) was scanned: only GitHub noreply emails, no work email, no AI co-author trailers. MIT license + package metadata + repo description/topics landed in PR #12. Then, in order:
   - [x] Re-enable auto-update: the `AUTO_UPDATE_ENABLED = false` guard in `src/main/updater.ts` is gone (2026-10-04, with the `1.1.0` bump). While the repo is private the check 404s and is only logged (`console.error`), with no dialog; once public, installed `1.1.0` copies update on their own.
