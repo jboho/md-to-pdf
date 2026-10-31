@@ -12,7 +12,7 @@ Electron desktop app (macOS-focused) that converts Markdown to PDF: batch conver
 
 ## Commands
 
-**npm** (`package-lock.json`; no pnpm/yarn). Node >=22.12 (`engines`; Electron 44 tooling requires it), 22 in CI.
+**npm** (`package-lock.json`; no pnpm/yarn). Node >=22.14 (`engines`; better-sqlite3 13 needs Node-API 10, which Node 22 gained in 22.14.0), 22 in CI.
 
 - `npm run dev` — `electron-vite dev` (`predev` runs `install-electron`: since Electron 42 the package no longer downloads its binary on install, and electron-vite needs it)
 - `npm run build` — `electron-vite build` (no installer)
@@ -23,11 +23,11 @@ Electron desktop app (macOS-focused) that converts Markdown to PDF: batch conver
 - `npm run rebuild:node` — `npm rebuild better-sqlite3` (plain-Node ABI)
 - `postinstall` — rebuilds better-sqlite3 for Electron ABI, then `electron-vite build`. No lint script.
 
-**Critical test gotcha:** `postinstall`/`rebuild` build `better-sqlite3` against Electron's Node ABI, but Vitest runs under plain Node. DB-backed tests fail with `NODE_MODULE_VERSION` mismatch unless you run `npm run rebuild:node && npm test`, then `npm run rebuild` to switch back before `npm run dev`. CI does this automatically.
+**Native module:** `better-sqlite3` 13 is built on Node-API and loads its bundled `prebuilds/<platform>-<arch>.node` before any local build, so one binary serves both Vitest (plain Node) and Electron; `npm test` and `npm run dev` work without switching. `rebuild`, `rebuild:node` and the postinstall rebuild still run but no longer change which binary loads.
 
 ## Stack
 
-TypeScript throughout; electron-vite; Electron ^44 (main/preload/renderer). Renderer: React 19, react-router-dom 7 (`createHashRouter`), Tailwind v4, shadcn/ui + Radix, lucide-react, sonner. Editor: CodeMirror 6; preview also react-markdown + remark-gfm + rehype-*. PDF: `marked` ^18 (ESM-only, so bundled into main via `externalizeDepsPlugin({ exclude })` in `electron.vite.config.ts`; every other dep is required from `node_modules` at runtime) + Electron `printToPDF`. Storage: `better-sqlite3` ^12; diffs via `diff` ^9. Auto-update: `electron-updater` against this repo's GitHub Releases.
+TypeScript throughout; electron-vite; Electron ^45 (main/preload/renderer). Renderer: React 19, react-router-dom 7 (`createHashRouter`), Tailwind v4, shadcn/ui + Radix, lucide-react, sonner. Editor: CodeMirror 6; preview also react-markdown + remark-gfm + rehype-*. PDF: `marked` ^18 (ESM-only, so bundled into main via `externalizeDepsPlugin({ exclude })` in `electron.vite.config.ts`; every other dep is required from `node_modules` at runtime) + Electron `printToPDF`. Storage: `better-sqlite3` ^13; diffs via `diff` ^9. Auto-update: `electron-updater` against this repo's GitHub Releases.
 
 ## Architecture
 
@@ -42,8 +42,7 @@ TypeScript throughout; electron-vite; Electron ^44 (main/preload/renderer). Rend
 
 ## Conventions / gotchas
 
-- DB ABI dance — see Commands; the biggest local-dev footgun.
-- better-sqlite3 stays on 12.x: 13.0.3 segfaults on `new Database()` under Node 22 on darwin-arm64 (WiseLibs/better-sqlite3#1514). 12.x ships no Electron 44 prebuilds, so `rebuild` compiles from source (Xcode CLT); a GNU `libtool` ahead of `/usr/bin/libtool` on PATH fails it with `unrecognized option -static`.
+- better-sqlite3 13 needs Node-API 10: on Node older than 22.14 (and all of Node 20) `new Database()` segfaults (WiseLibs/better-sqlite3#1514), hence `engines` `>=22.14.0`. 12.x can't follow Electron 45+: it compiles against V8 APIs (`GetPrototypeV2`, `HolderV2`) that V8 15 removed.
 - `electronFuses` in `electron-builder.yml` disables RunAsNode, NODE_OPTIONS and `--inspect` and enforces asar-only loading with integrity validation; entitlements are `allow-jit` only.
 - Env: `FEEDBACK_GITHUB_REPO` (default `jboho/md-to-pdf`, `src/main/config.ts`) routes in-app feedback issues. macOS signing/notarization: `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (+ CI `APPLE_CERTIFICATE_P12_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, electron-builder `CSC_LINK`/`CSC_KEY_PASSWORD`). No `.env.example`.
 - macOS 13+ only (Electron 44; `mac.minimumSystemVersion`). Open dialogs pass a `defaultPath` (last folder this session, else Documents) because Electron 43+ otherwise opens Downloads.
