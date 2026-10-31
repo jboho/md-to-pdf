@@ -52,8 +52,8 @@ Download the latest `.dmg` from the [Releases page](https://github.com/jboho/md-
 
 ## Requirements (to build from source)
 
-- **[Node.js](https://nodejs.org/)** 22.12 or later
-- **Xcode Command Line Tools** — `better-sqlite3` compiles from source
+- **[Node.js](https://nodejs.org/)** 22.14 or later (`better-sqlite3` needs Node-API 10)
+- **Xcode Command Line Tools** — `postinstall` still compiles `better-sqlite3` from source, though the app loads its bundled prebuilt binary
 - **macOS** for the `--mac` build target
 
 ## Quick start
@@ -75,17 +75,10 @@ npm run dev
 | `npm run typecheck`    | Typecheck the main and renderer projects                                 |
 | `npm test`             | Unit tests ([Vitest](https://vitest.dev/)), under plain Node             |
 | `npm run test:watch`   | Vitest watch mode                                                        |
-| `npm run rebuild`      | Rebuild `better-sqlite3` for Electron's ABI                              |
-| `npm run rebuild:node` | Rebuild `better-sqlite3` for plain Node's ABI                            |
+| `npm run rebuild`      | Compile `better-sqlite3` against Electron                                |
+| `npm run rebuild:node` | Compile `better-sqlite3` against plain Node                              |
 
-`postinstall` rebuilds `better-sqlite3` for Electron's Node ABI, which is what `dev`/`dist` need. `npm test` runs under plain Node, a different ABI, so every DB-backed test fails with a `NODE_MODULE_VERSION` mismatch unless you rebuild for Node first:
-
-```bash
-npm run rebuild:node && npm test   # switches better-sqlite3 to plain-Node ABI
-npm run rebuild                    # switch back to Electron's ABI before npm run dev
-```
-
-CI (`ci.yml`) does this automatically; it's only a manual step when testing locally.
+`better-sqlite3` loads its bundled prebuilt binary first, and that one binary works under both plain Node (tests) and Electron (`dev`, `dist`). So `npm test` and `npm run dev` work one after the other with no rebuild in between.
 
 ## Configuration
 
